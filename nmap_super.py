@@ -1,45 +1,53 @@
 #!/usr/bin/python3
 import subprocess
+import os
 
-# Function that prompts the user for their choice of scan type
+# Define a function to prompt the user to select an option
 def menu():
     print("Please select an option:")
-    # Each print statement provides a different scan option for the user
-    print("1. Scan using nmap -A")  # -A: Enables OS detection, version detection, script scanning, and traceroute
-    print("2. Scan using nmap -O")  # -O: Enables OS detection
-    print("3. Scan using nmap -O -osscan-guess")  # -O -osscan-guess: Enables OS detection with guessing
-    print("4. Scan using nmap -p-")  # -p-: Scan all 65535 ports
-    print("5. Scan using nmap -sT")  # -sT: TCP connect scan
-    print("6. Scan using nmap -A -iL /tmp/hosts.txt")  # -A -iL /tmp/hosts.txt: Scan hosts from a file with -A option
-    print("7. Scan using nmap -sV")  # -sV: Version detection
-    print("8. Scan using nmap -sA")  # -sA: TCP ACK scan
-    print("9. Scan using nmap -PN")  # -PN: Treat all hosts as online
-    print("10. Scan using nmap -sN")  # -sN: TCP Null scan
-    print("11. Scan using nmap -sS -p 80 -f")  # -sS -p 80 -f: SYN scan for port 80 with fragmentation
-    print("12. Scan using nmap -n -D")  # -n -D: Decoy scan with no DNS resolution
-    print("0. Exit")  # Exit the script
-    choice = input("Enter your choice: ")  # Prompt the user for their choice
-    return choice  # Return the user's choice
+    print("1. Scan using nmap -A (Enables OS detection, version detection, script scanning, and traceroute)")
+    print("2. Scan using nmap -O (Enables OS detection)")
+    print("3. Scan using nmap -O -osscan-guess (Enables OS detection and guesses OS more aggressively)")
+    print("4. Scan using nmap -p- (Scan all 65535 ports)")
+    print("5. Scan using nmap -sT (TCP connect scan)")
+    print("6. Scan using nmap -A -iL /tmp/hosts.txt (Advanced scan on hosts in the given file)")
+    print("7. Scan using nmap -sV (Service version detection)")
+    print("8. Scan using nmap -sA (TCP ACK scan)")
+    print("9. Scan using nmap -PN (Don't ping before scanning)")
+    print("10. Scan using nmap -sN (TCP Null scan)")
+    print("11. Scan using nmap -sS -f (TCP SYN scan, fragment packets)")
+    print("12. Scan using nmap -sS (TCP SYN scan)")
+    print("13. Scan using nmap -sU (UDP scan)")
+    print("14. Scan using nmap -sS -sU (TCP SYN and UDP scan)")
+    print("15. Scan using nmap -sn (Ping scan)")
+    print("16. Scan using nmap -n -D (Scan without DNS resolution, and decoy scanning)")
+    print("0. Exit")
+    choice = input("Enter your choice: ")
+    return choice
 
-# Function to perform the actual nmap scan
-def perform_scan(options):
-    ip_address = input("Enter IP address: ")  # Prompt for target IP
-    # Construct the nmap command with the selected options and IP address
+# Define a function to perform a scan using nmap with the specified options
+def perform_scan(options, require_ports=False):
+    ip_address = input("Enter IP address or range: ")
+    if require_ports:
+        port_spec = input("Would you like to specify ports? (y/n): ")
+        if port_spec.lower() == "y":
+            ports = input("Enter port(s) (separated by comma for multiple ports): ")
+            options.extend(["-p", ports])
     command = ["nmap"] + options + [ip_address]
-    # Execute the nmap command and capture the output
     result = subprocess.run(command, capture_output=True)
-    print(result.stdout.decode())  # Print the command output to the console
-    # Construct a filename based on the IP address and scan options
-    filename = f"{ip_address}_{options}.txt".replace('"', '')
-    with open(filename, "w") as f:  # Open the file
-        f.write(result.stdout.decode())  # Write the command output to the file
-    input("Press enter to continue...")  # Pause before moving on
+    print(result.stdout.decode())
+    filename = f"{ip_address}_{'-'.join(options)}.txt".replace('"', '')
+    directory = "scan_results"
+    os.makedirs(directory, exist_ok=True)  # Create the directory if it doesn't exist
+    filepath = os.path.join(directory, filename)
+    with open(filepath, "w") as f:
+        f.write(result.stdout.decode())
+    input("Press enter to continue...")
 
-# Main function to run the menu and perform the selected scan
+# Define the main function to prompt the user for options and perform scans
 def main():
-    while True:  # Loop to allow repeated scans
-        choice = menu()  # Get the user's choice of scan
-        # Based on the user's choice, perform the appropriate scan
+    while True:
+        choice = menu()
         if choice == '1':
             perform_scan(["-A"])
         elif choice == '2':
@@ -49,28 +57,36 @@ def main():
         elif choice == '4':
             perform_scan(["-p-"])
         elif choice == '5':
-            perform_scan(["-sT"])
+            perform_scan(["-sT"], require_ports=True)
         elif choice == '6':
             perform_scan(["-A", "-iL", "/tmp/hosts.txt"])
         elif choice == '7':
-            perform_scan(["-sV"])
+            perform_scan(["-sV"], require_ports=True)
         elif choice == '8':
-            perform_scan(["-sA"])
+            perform_scan(["-sA"], require_ports=True)
         elif choice == '9':
-            perform_scan(["-PN"])
+            perform_scan(["-PN"], require_ports=True)
         elif choice == '10':
-            perform_scan(["-sN"])
+            perform_scan(["-sN"], require_ports=True)
         elif choice == '11':
-            perform_scan(["-sS", "-p", "80", "-f"])
+            perform_scan(["-sS", "-f"], require_ports=True)
         elif choice == '12':
-            ip_address = input("Enter IP address: ")  # Prompt for target IP
-            spoof_ip = input("Enter spoofed IP address: ")  # Prompt for decoy IP
-            perform_scan(["-n", "-D", spoof_ip, ip_address])  # Run the scan with the given decoy IP
-        elif choice == '0':  # If the user chose to exit...
-            break  # Exit the loop, ending the script
-        else:  # If the user entered an invalid choice...
-            print("Invalid choice. Please try again.")  # Show an error message
+            perform_scan(["-sS"], require_ports=True)
+        elif choice == '13':
+            perform_scan(["-sU"], require_ports=True)
+        elif choice == '14':
+            perform_scan(["-sS", "-sU"], require_ports=True)
+        elif choice == '15':
+            perform_scan(["-sn"])
+        elif choice == '16':
+            ip_address = input("Enter IP address: ")
+            spoof_ip = input("Enter spoofed IP address: ")
+            perform_scan(["-n", "-D", spoof_ip, ip_address])
+        elif choice == '0':
+            break
+        else:
+            print("Invalid choice. Please try again.")
+            continue
 
-# If this script is being run directly, call the main function
 if __name__ == "__main__":
     main()
